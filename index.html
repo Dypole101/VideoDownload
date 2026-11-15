@@ -1,76 +1,226 @@
-import os, uuid
-from flask import Flask, request, jsonify, send_from_directory
-from flask_cors import CORS
-import yt_dlp
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0d0b1a">
+<title>Grab - play and download</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@700;900&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0d0b1a;--panel:#171329;--panel2:#221c40;--line:#2e2750;--text:#f3f0ff;--mute:#9a93c4;--violet:#7c5cff;--coral:#ff4f6d;--cyan:#29e0ff;--lime:#b6ff5c;--accent:var(--violet);
+--head:'Unbounded','Trebuchet MS',system-ui,sans-serif;--body:'Manrope',system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--ink);color:var(--text);font-family:var(--body)}
+body{min-height:100vh;padding:env(safe-area-inset-top) 0 env(safe-area-inset-bottom);
+background:radial-gradient(900px 500px at 85% -10%,rgba(124,92,255,.28),transparent 60%),radial-gradient(700px 500px at -10% 30%,rgba(255,79,109,.16),transparent 60%),var(--ink)}
+body[data-p="youtube"]{--accent:var(--coral)}
+body[data-p="instagram"]{--accent:#d65bff}
+.wrap{max-width:620px;margin:0 auto;padding:22px 18px 60px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px}
+.logo{font-family:var(--head);font-weight:900;font-size:22px;display:flex;align-items:center;gap:10px}
+.logo i{width:30px;height:30px;border-radius:9px;background:conic-gradient(from 200deg,var(--violet),var(--coral),var(--cyan),var(--violet));display:grid;place-items:center}
+.logo i::after{content:"";width:12px;height:12px;border-radius:4px;background:var(--ink)}
+.ib{background:var(--panel);border:1px solid var(--line);color:var(--text);width:42px;height:42px;border-radius:14px;font-size:18px;cursor:pointer}
+h1{font-family:var(--head);font-weight:900;font-size:clamp(28px,8.5vw,42px);line-height:1.08;letter-spacing:-1.5px;margin:0 0 22px}
+h1 span{display:block;background:linear-gradient(90deg,var(--violet),var(--coral) 55%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+.field{background:var(--panel);border:1.5px solid var(--line);border-radius:22px;padding:6px;display:flex;gap:6px;align-items:center;transition:.25s}
+.field:focus-within,body[data-p="youtube"] .field,body[data-p="instagram"] .field{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 22%,transparent),0 0 40px color-mix(in srgb,var(--accent) 30%,transparent)}
+.chip{flex:none;height:44px;min-width:44px;padding:0 12px;border-radius:16px;background:var(--panel2);display:grid;place-items:center;font-weight:800;font-size:12px;color:var(--mute)}
+body[data-p="youtube"] .chip{background:var(--coral);color:#fff}
+body[data-p="instagram"] .chip{background:linear-gradient(135deg,#ffb347,#ff3d81,#a23bff);color:#fff}
+.field input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font:700 15px var(--body);padding:12px 4px}
+.field input::placeholder{color:#6f689a}
+.pb{flex:none;height:44px;padding:0 16px;border-radius:16px;border:0;background:var(--panel2);color:var(--text);font:800 13px var(--body);cursor:pointer}
+.go{margin-top:16px;width:100%;border:0;border-radius:20px;padding:17px;font:900 16px var(--head);color:#fff;cursor:pointer;background:linear-gradient(95deg,var(--violet),var(--coral));box-shadow:0 14px 40px rgba(124,92,255,.4);position:relative;overflow:hidden}
+.go[disabled]{opacity:.6}
+.go.busy::after{content:"";position:absolute;inset:0;background:linear-gradient(100deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);animation:sw 1s linear infinite}
+@keyframes sw{from{transform:translateX(-100%)}to{transform:translateX(100%)}}
+.msg{display:none;margin-top:16px;padding:14px 16px;border-radius:16px;font-size:14px;line-height:1.5}
+.msg.err{display:block;background:rgba(255,79,109,.12);border:1px solid rgba(255,79,109,.45);color:#ffc2cc}
+.msg.info{display:block;background:rgba(41,224,255,.08);border:1px solid rgba(41,224,255,.35);color:#bff3ff}
+.player{display:none;margin-top:22px;background:var(--panel);border:1px solid var(--line);border-radius:22px;overflow:hidden}
+.player.show{display:block;animation:pop .35s ease}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.player video{display:block;width:100%;max-height:70vh;background:#000}
+.bar{display:flex;align-items:center;gap:10px;padding:12px 8px 12px 16px;position:relative}
+.bar .t{flex:1;min-width:0;font-weight:800;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dots{width:44px;height:44px;border-radius:14px;border:0;background:var(--panel2);color:var(--text);font-size:22px;font-weight:900;cursor:pointer;line-height:1}
+.menu{display:none;position:absolute;right:10px;bottom:62px;min-width:220px;background:var(--panel2);border:1px solid var(--line);border-radius:16px;padding:6px;box-shadow:0 18px 50px rgba(0,0,0,.55);z-index:5}
+.menu.show{display:block;animation:pop .2s ease}
+.menu button{display:block;width:100%;text-align:left;background:none;border:0;color:var(--text);font:700 14px var(--body);padding:13px 14px;border-radius:12px;cursor:pointer}
+.menu button:active,.menu button:hover{background:rgba(124,92,255,.25)}
+.menu small{display:block;color:var(--mute);font-weight:600;font-size:12px;margin-top:2px}
+.sheet{position:fixed;inset:0;background:rgba(5,4,12,.7);backdrop-filter:blur(6px);display:none;align-items:flex-end;justify-content:center;z-index:9}
+.sheet.show{display:flex}
+.sheet .in{width:100%;max-width:620px;background:var(--panel);border:1px solid var(--line);border-radius:26px 26px 0 0;padding:22px 18px calc(22px + env(safe-area-inset-bottom))}
+.sheet label{display:block;font-weight:800;font-size:13px;margin:14px 0 6px}
+.sheet input{width:100%;background:var(--ink);border:1px solid var(--line);color:var(--text);border-radius:14px;padding:13px;font:700 14px var(--body);outline:0}
+.sheet p{color:var(--mute);font-size:12.5px;line-height:1.55;margin:8px 0 0}
+.save{margin-top:18px;width:100%;border:0;border-radius:16px;padding:14px;background:var(--violet);color:#fff;font:800 15px var(--body);cursor:pointer}
+.legal{margin-top:36px;color:#6f689a;font-size:12px;line-height:1.6}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+</style>
+</head>
+<body data-p="">
+<div class="wrap">
+  <header>
+    <div class="logo"><i></i>Grab</div>
+    <button class="ib" id="openSet" aria-label="Settings">&#9881;</button>
+  </header>
+  <h1>Paste a link.<span>Watch it, then keep it.</span></h1>
 
-BASE = os.path.expanduser("~/grab")
-os.makedirs(BASE, exist_ok=True)
-PORT = 8080
+  <div class="field">
+    <div class="chip" id="chip">URL</div>
+    <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="YouTube or Instagram link">
+    <button class="pb" id="paste">Paste</button>
+  </div>
+  <button class="go" id="go">Play video</button>
+  <div class="msg" id="msg"></div>
 
-app = Flask(__name__)
-CORS(app)
+  <div class="player" id="player">
+    <video id="vid" controls playsinline></video>
+    <div class="bar">
+      <div class="t" id="title">Video</div>
+      <button class="dots" id="dots" aria-label="More options">&#8942;</button>
+      <div class="menu" id="menu">
+        <button id="dlVideo">Download video<small>MP4, as shown above</small></button>
+        <button id="dlAudio">Download audio<small>MP3 only</small></button>
+        <button id="copyLink">Copy original link</button>
+      </div>
+    </div>
+  </div>
 
-@app.after_request
-def pna(resp):
-    resp.headers["Access-Control-Allow-Private-Network"] = "true"
-    return resp
+  <p class="legal">Only download content you own or have permission to use. Platform terms and copyright laws still apply.</p>
+</div>
 
-def fmt_for(q):
-    if q in ("max", "best"):
-        return "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b"
-    return (f"bv*[height<={q}][ext=mp4]+ba[ext=m4a]/"
-            f"b[height<={q}][ext=mp4]/bv*[height<={q}]+ba/b")
+<div class="sheet" id="sheet">
+  <div class="in">
+    <b style="font-family:var(--head);font-size:16px">Server</b>
+    <p>Run the server in Termux first. The default address works when Termux is on this same phone.</p>
+    <label for="api">Server address</label>
+    <input id="api" type="url" autocapitalize="off">
+    <label for="key">Access key (optional)</label>
+    <input id="key" type="password">
+    <button class="save" id="save">Save</button>
+  </div>
+</div>
 
-@app.post("/")
-def grab():
-    d = request.get_json(force=True, silent=True) or {}
-    url = d.get("url", "").strip()
-    if not url:
-        return jsonify(status="error", error={"code": "error.api.link.invalid"})
+<script>
+(function(){
+  var $=function(i){return document.getElementById(i)};
+  var store={
+    get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},
+    set:function(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+  };
+  var DEFAULT_API='http://localhost:8080';
+  var current={url:'',file:'',name:''};
 
-    rid = uuid.uuid4().hex[:10]
-    folder = os.path.join(BASE, rid)
-    os.makedirs(folder, exist_ok=True)
+  function platform(u){
+    if(/(youtube\.com|youtu\.be)\//i.test(u))return 'youtube';
+    if(/instagram\.com\//i.test(u))return 'instagram';
+    return '';
+  }
+  function onUrl(){
+    var p=platform($('url').value.trim());
+    document.body.dataset.p=p;
+    $('chip').textContent=p==='youtube'?'YT':p==='instagram'?'IG':'URL';
+  }
+  function show(t,x){var m=$('msg');m.className='msg '+t;m.textContent=x}
+  function hide(){$('msg').className='msg'}
 
-    opts = {
-        "outtmpl": os.path.join(folder, "%(title).80B.%(ext)s"),
-        "noplaylist": True,
-        "quiet": True,
-        "merge_output_format": "mp4",
-    }
+  $('url').addEventListener('input',onUrl);
+  $('url').addEventListener('keydown',function(e){if(e.key==='Enter')play()});
+  $('paste').onclick=function(){
+    navigator.clipboard.readText().then(function(t){
+      if(t){$('url').value=t.trim();onUrl();play();}
+    }).catch(function(){show('err','Could not read the clipboard. Long-press the box and paste the link.')});
+  };
 
-    if d.get("downloadMode") == "audio":
-        codec = {"mp3": "mp3", "opus": "opus", "ogg": "vorbis", "wav": "wav"}.get(
-            d.get("audioFormat", "mp3"), "mp3")
-        opts["format"] = "bestaudio/best"
-        opts["postprocessors"] = [{
-            "key": "FFmpegExtractAudio",
-            "preferredcodec": codec,
-            "preferredquality": "192",
-        }]
-    else:
-        opts["format"] = fmt_for(str(d.get("videoQuality", "1080")))
+  var ERR={
+    'error.api.link.invalid':'That link does not look right.',
+    'error.api.fetch.empty':'Could not get this video. Update yt-dlp in Termux or try another link.',
+    'error.api.auth.key.missing':'The server needs an access key. Add it in settings.',
+    'error.api.auth.key.invalid':'The access key was rejected.'
+  };
 
-    try:
-        with yt_dlp.YoutubeDL(opts) as ydl:
-            ydl.download([url])
-        files = os.listdir(folder)
-        if not files:
-            return jsonify(status="error", error={"code": "error.api.fetch.empty"})
-        name = files[0]
-        return jsonify(
-            status="tunnel",
-            url=f"http://localhost:{PORT}/file/{rid}/{name}",
-            filename=name,
-        )
-    except Exception as e:
-        print("ERROR:", e)
-        return jsonify(status="error", error={"code": "error.api.fetch.empty"})
+  function ask(link,body){
+    var base=store.get('api',DEFAULT_API).trim().replace(/\/+$/,'');
+    var headers={'Accept':'application/json','Content-Type':'application/json'};
+    var key=store.get('key','').trim();
+    if(key)headers['Authorization']='Api-Key '+key;
+    body.url=link;
+    return fetch(base+'/',{method:'POST',headers:headers,body:JSON.stringify(body)}).then(function(r){return r.json()});
+  }
 
-@app.get("/file/<rid>/<path:name>")
-def serve(rid, name):
-    dl = request.args.get("dl") == "1"
-    return send_from_directory(os.path.join(BASE, rid), name, as_attachment=dl)
+  function play(){
+    var link=$('url').value.trim();
+    hide();$('menu').className='menu';
+    if(!link){show('err','Paste a YouTube or Instagram link first.');return}
+    if(!platform(link)){show('err','Only YouTube and Instagram links work here.');return}
+    var btn=$('go');btn.disabled=true;btn.classList.add('busy');btn.textContent='Loading...';
+    ask(link,{downloadMode:'auto',videoQuality:'720'}).then(function(d){
+      if(d.status==='error'){
+        var c=d.error&&d.error.code;
+        show('err',ERR[c]||'The server could not load this link.');return;
+      }
+      if(d.url){
+        current={url:link,file:d.url,name:d.filename||'video.mp4'};
+        $('vid').src=d.url;
+        $('title').textContent=current.name;
+        $('player').className='player show';
+        $('vid').play().catch(function(){});
+      }else{show('err','The server sent a reply this page cannot use.')}
+    }).catch(function(){
+      show('err','Cannot reach the server. Start it in Termux with: python server.py');
+    }).then(function(){
+      btn.disabled=false;btn.classList.remove('busy');btn.textContent='Play video';
+    });
+  }
+  $('go').onclick=play;
 
-if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=PORT)
+  function save(href,name){
+    var a=document.createElement('a');
+    a.href=href;a.download=name||'';a.rel='noopener';
+    document.body.appendChild(a);a.click();a.remove();
+  }
+
+  $('dots').onclick=function(e){e.stopPropagation();$('menu').classList.toggle('show')};
+  document.addEventListener('click',function(){$('menu').className='menu'});
+
+  $('dlVideo').onclick=function(){
+    if(!current.file)return;
+    save(current.file+(current.file.indexOf('?')>-1?'&':'?')+'dl=1',current.name);
+    show('info','Video download started.');
+  };
+  $('dlAudio').onclick=function(){
+    if(!current.url)return;
+    show('info','Preparing audio...');
+    ask(current.url,{downloadMode:'audio',audioFormat:'mp3'}).then(function(d){
+      if(d.status==='error'||!d.url){show('err','Could not make the audio file.');return}
+      save(d.url+(d.url.indexOf('?')>-1?'&':'?')+'dl=1',d.filename||'audio.mp3');
+      show('info','Audio download started.');
+    }).catch(function(){show('err','Cannot reach the server.')});
+  };
+  $('copyLink').onclick=function(){
+    if(navigator.clipboard)navigator.clipboard.writeText(current.url).then(function(){show('info','Link copied.')});
+  };
+
+  $('openSet').onclick=function(){
+    $('api').value=store.get('api',DEFAULT_API);
+    $('key').value=store.get('key','');
+    $('sheet').classList.add('show');
+  };
+  $('sheet').onclick=function(e){if(e.target===$('sheet'))$('sheet').classList.remove('show')};
+  $('save').onclick=function(){
+    var a=$('api').value.trim();
+    if(a&&!/^https?:\/\//i.test(a))a='http://'+a;
+    store.set('api',a||DEFAULT_API);
+    store.set('key',$('key').value.trim());
+    $('sheet').classList.remove('show');show('info','Saved.');
+  };
+})();
+</script>
+</body>
+</html>
