@@ -1,0 +1,76 @@
+import os, uuid
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+import yt_dlp
+
+BASE = os.path.expanduser("~/grab")
+os.makedirs(BASE, exist_ok=True)
+PORT = 8080
+
+app = Flask(__name__)
+CORS(app)
+
+@app.after_request
+def pna(resp):
+    resp.headers["Access-Control-Allow-Private-Network"] = "true"
+    return resp
+
+def fmt_for(q):
+    if q in ("max", "best"):
+        return "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b"
+    return (f"bv*[height<={q}][ext=mp4]+ba[ext=m4a]/"
+            f"b[height<={q}][ext=mp4]/bv*[height<={q}]+ba/b")
+
+@app.post("/")
+def grab():
+    d = request.get_json(force=True, silent=True) or {}
+    url = d.get("url", "").strip()
+    if not url:
+        return jsonify(status="error", error={"code": "error.api.link.invalid"})
+
+    rid = uuid.uuid4().hex[:10]
+    folder = os.path.join(BASE, rid)
+    os.makedirs(folder, exist_ok=True)
+
+    opts = {
+        "outtmpl": os.path.join(folder, "%(title).80B.%(ext)s"),
+        "noplaylist": True,
+        "quiet": True,
+        "merge_output_format": "mp4",
+    }
+
+    if d.get("downloadMode") == "audio":
+        codec = {"mp3": "mp3", "opus": "opus", "ogg": "vorbis", "wav": "wav"}.get(
+            d.get("audioFormat", "mp3"), "mp3")
+        opts["format"] = "bestaudio/best"
+        opts["postprocessors"] = [{
+            "key": "FFmpegExtractAudio",
+            "preferredcodec": codec,
+            "preferredquality": "192",
+        }]
+    else:
+        opts["format"] = fmt_for(str(d.get("videoQuality", "1080")))
+
+    try:
+        with yt_dlp.YoutubeDL(opts) as ydl:
+            ydl.download([url])
+        files = os.listdir(folder)
+        if not files:
+            return jsonify(status="error", error={"code": "error.api.fetch.empty"})
+        name = files[0]
+        return jsonify(
+            status="tunnel",
+            url=f"http://localhost:{PORT}/file/{rid}/{name}",
+            filename=name,
+        )
+    except Exception as e:
+        print("ERROR:", e)
+        return jsonify(status="error", error={"code": "error.api.fetch.empty"})
+
+@app.get("/file/<rid>/<path:name>")
+def serve(rid, name):
+    dl = request.args.get("dl") == "1"
+    return send_from_directory(os.path.join(BASE, rid), name, as_attachment=dl)
+
+if __name__ == "__main__":
+    app.run(host="127.0.0.1", port=PORT)
