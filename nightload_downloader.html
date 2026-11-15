@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NightLoad — Video Downloader</title>
+<style>
+  :root { color-scheme: dark; --bg:#090b12; --panel:#121622; --panel2:#191f2e; --text:#f4f6ff; --muted:#9aa4ba; --line:#293148; --accent:#8b5cf6; --accent2:#22d3ee; --good:#34d399; --warn:#fbbf24; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:radial-gradient(ellipse at 50% -10%, #24204a 0, transparent 48%), var(--bg); color:var(--text); font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; }
+  .wrap { width:min(920px, 92%); margin:auto; }
+  header { display:flex; align-items:center; justify-content:space-between; padding:24px 0; }
+  .brand { display:flex; align-items:center; gap:11px; font-weight:800; letter-spacing:.2px; font-size:1.15rem; }
+  .logo { width:38px; height:38px; display:grid; place-items:center; border-radius:12px; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#070913; font-size:20px; }
+  .tag { border:1px solid var(--line); border-radius:999px; padding:6px 11px; color:var(--muted); font-size:.78rem; }
+  main { padding:42px 0 55px; }
+  .hero { text-align:center; max-width:700px; margin:0 auto 30px; }
+  .eyebrow { color:#b9a5ff; font-size:.78rem; font-weight:750; text-transform:uppercase; letter-spacing:2px; }
+  h1 { font-size:clamp(2.2rem,6vw,4rem); line-height:1.08; letter-spacing:-1.8px; margin:14px 0; }
+  h1 span { background:linear-gradient(90deg,#c4b5fd,#67e8f9); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .hero p { color:var(--muted); max-width:570px; margin:0 auto; }
+  .card { background:linear-gradient(180deg,rgba(22,27,42,.97),rgba(15,19,30,.97)); border:1px solid var(--line); border-radius:22px; padding:clamp(18px,4vw,32px); box-shadow:0 24px 80px #0005; }
+  .platforms { display:flex; justify-content:center; flex-wrap:wrap; gap:10px; margin-bottom:23px; }
+  .platform { padding:8px 14px; border-radius:999px; border:1px solid var(--line); color:#cbd3e5; background:#0e1220; font-size:.9rem; }
+  .platform strong { color:#fff; }
+  label { display:block; font-size:.9rem; font-weight:650; margin-bottom:9px; }
+  .inputrow { display:flex; gap:10px; }
+  input[type=url] { width:100%; min-width:0; border:1px solid #343d57; background:#090d17; color:var(--text); padding:16px; border-radius:13px; font:inherit; outline:none; }
+  input[type=url]:focus { border-color:var(--accent2); box-shadow:0 0 0 3px #22d3ee18; }
+  button { border:0; border-radius:13px; padding:14px 19px; font:inherit; font-weight:750; cursor:pointer; transition:transform .15s,filter .15s; }
+  button:hover { filter:brightness(1.08); transform:translateY(-1px); }
+  .primary { background:linear-gradient(100deg,var(--accent),#6366f1); color:white; white-space:nowrap; }
+  .secondary { background:#20283b; color:#e6eaff; border:1px solid #35405a; }
+  .formats { display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-top:18px; color:var(--muted); font-size:.88rem; }
+  .format { display:flex; align-items:center; gap:7px; padding:8px 12px; background:#0c111d; border:1px solid var(--line); border-radius:10px; color:#dbe3f5; }
+  .format input { accent-color:var(--accent); }
+  .status { display:none; margin-top:20px; border:1px solid var(--line); border-radius:14px; padding:16px; background:#0b101b; }
+  .status.show { display:block; }
+  .status h3 { margin:0 0 6px; font-size:1rem; }
+  .status p { color:var(--muted); margin:0 0 12px; font-size:.92rem; overflow-wrap:anywhere; }
+  .actions { display:flex; flex-wrap:wrap; gap:9px; }
+  .notice { margin-top:17px; padding:12px 14px; border-radius:12px; color:#c3cbe0; background:#1b2030; font-size:.84rem; }
+  .notice b { color:#f0d9a0; }
+  .features { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:22px; }
+  .feature { border:1px solid var(--line); background:#101522b8; border-radius:16px; padding:18px; }
+  .feature .ico { font-size:1.45rem; }
+  .feature h3 { font-size:.98rem; margin:8px 0 5px; }
+  .feature p { color:var(--muted); font-size:.85rem; margin:0; }
+  footer { color:#7e89a2; text-align:center; font-size:.8rem; padding:20px 0 32px; }
+  @media(max-width:650px) { .inputrow { flex-direction:column; } .inputrow button { width:100%; } .features { grid-template-columns:1fr; } header { padding:17px 0; } main { padding-top:28px; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand"><div class="logo">↓</div> NightLoad</div>
+    <div class="tag">Single-file demo</div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="eyebrow">Save your media</div>
+      <h1>Videos, made <span>offline.</span></h1>
+      <p>Paste a video link or a direct media-file URL. Simple, dark, and built to run right in your browser.</p>
+    </section>
+
+    <section class="card" aria-label="Downloader">
+      <div class="platforms">
+        <div class="platform">▶ <strong>YouTube</strong></div>
+        <div class="platform">◎ <strong>Instagram</strong></div>
+        <div class="platform">▣ <strong>MP4</strong></div>
+        <div class="platform">♫ <strong>MP3</strong></div>
+      </div>
+
+      <form id="downloadForm">
+        <label for="videoUrl">Paste your video or direct media URL</label>
+        <div class="inputrow">
+          <input id="videoUrl" type="url" placeholder="https://…" autocomplete="url" required>
+          <button class="primary" type="submit">Check link ↗</button>
+        </div>
+        <div class="formats" role="group" aria-label="Preferred format">
+          <span>Preferred format:</span>
+          <label class="format"><input type="radio" name="format" value="mp4" checked> MP4 video</label>
+          <label class="format"><input type="radio" name="format" value="mp3"> MP3 audio</label>
+        </div>
+      </form>
+
+      <div id="status" class="status" aria-live="polite">
+        <h3 id="statusTitle">Link check</h3>
+        <p id="statusText"></p>
+        <div class="actions" id="statusActions"></div>
+      </div>
+
+      <div class="notice"><b>Important:</b> This single HTML file does not bypass platform restrictions or extract media from Instagram/YouTube pages. Direct media-file URLs may download if the server permits it. Use only content you own or are authorized to save.</div>
+    </section>
+
+    <section class="features">
+      <article class="feature"><div class="ico">⚡</div><h3>Lightweight</h3><p>No frameworks, installs, or backend required for the page itself.</p></article>
+      <article class="feature"><div class="ico">🔒</div><h3>Browser-based</h3><p>Your pasted link is checked locally by this page; it is not sent to a server by this code.</p></article>
+      <article class="feature"><div class="ico">🎧</div><h3>MP4 / MP3 options</h3><p>Choose your preferred output. Conversion from video to audio requires a suitable media tool or service.</p></article>
+    </section>
+  </main>
+  <footer>NightLoad · Use media responsibly and respect creators’ rights.</footer>
+</div>
+
+<script>
+const form = document.getElementById('downloadForm');
+const urlInput = document.getElementById('videoUrl');
+const statusBox = document.getElementById('status');
+const statusTitle = document.getElementById('statusTitle');
+const statusText = document.getElementById('statusText');
+const statusActions = document.getElementById('statusActions');
+
+function button(label, onClick, secondary = true) {
+  const b = document.createElement('button');
+  b.type = 'button';
+  b.className = secondary ? 'secondary' : 'primary';
+  b.textContent = label;
+  b.addEventListener('click', onClick);
+  statusActions.appendChild(b);
+}
+function show(title, message) {
+  statusBox.classList.add('show');
+  statusTitle.textContent = title;
+  statusText.textContent = message;
+  statusActions.replaceChildren();
+}
+function hostOf(url) {
+  return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+}
+function isSocial(host) {
+  return host === 'youtube.com' || host.endsWith('.youtube.com') ||
+    host === 'youtu.be' || host === 'instagram.com' || host.endsWith('.instagram.com');
+}
+function isDirectMedia(url) {
+  return /\.(mp4|webm|mov|m4v|mp3|m4a|wav|ogg)(?:$|[?#])/i.test(url);
+}
+form.addEventListener('submit', (event) => {
+  event.preventDefault();
+  let url;
+  try {
+    url = new URL(urlInput.value.trim());
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error('Unsupported protocol');
+  } catch {
+    show('Please enter a valid URL', 'Use a full link beginning with https:// or http://.');
+    return;
+  }
+  const host = hostOf(url.href);
+  const format = new FormData(form).get('format') || 'mp4';
+  show('Link checked', 'Address: ' + url.href);
+
+  if (isSocial(host)) {
+    statusTitle.textContent = 'Social-media link detected';
+    statusText.textContent = 'This is a ' + (host.includes('instagram') ? 'Instagram' : 'YouTube') +
+      ' page. A single HTML file cannot extract its video or convert it to MP3. Open the original page or copy the link for a downloader that you are authorized to use.';
+    button('Open original page ↗', () => window.open(url.href, '_blank', 'noopener,noreferrer'), false);
+    button('Copy link', async () => {
+      try { await navigator.clipboard.writeText(url.href); statusText.textContent = 'Link copied to clipboard.'; }
+      catch { urlInput.select(); statusText.textContent = 'Select and copy the link from the input above.'; }
+    });
+  } else if (isDirectMedia(url.href)) {
+    const ext = (url.pathname.match(/\.([a-z0-9]+)$/i) || [,''])[1].toLowerCase();
+    const audioExts = ['mp3','m4a','wav','ogg'];
+    const videoExts = ['mp4','webm','mov','m4v'];
+    if (format === 'mp3' && videoExts.includes(ext)) {
+      statusTitle.textContent = 'Conversion required';
+      statusText.textContent = 'This URL appears to be a video file. Browsers do not convert it to MP3 with this page alone. Use an authorized local media converter, or choose a direct audio URL.';
+      button('Open media URL ↗', () => window.open(url.href, '_blank', 'noopener,noreferrer'), false);
+    } else {
+      statusTitle.textContent = 'Direct media URL detected';
+      statusText.textContent = 'The browser will attempt to open or download this file. The remote server may block downloads or play the file instead.';
+      button('Try download ↓', () => {
+        const a = document.createElement('a');
+        a.href = url.href;
+        a.download = '';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }, false);
+      button('Open media ↗', () => window.open(url.href, '_blank', 'noopener,noreferrer'));
+    }
+  } else {
+    statusTitle.textContent = 'Web page link detected';
+    statusText.textContent = 'This URL does not look like a direct media file or a recognized Instagram/YouTube link. The page cannot extract embedded video from arbitrary websites.';
+    button('Open link ↗', () => window.open(url.href, '_blank', 'noopener,noreferrer'), false);
+  }
+});
+</script>
+</body>
+</html>
